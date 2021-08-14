@@ -1,0 +1,138 @@
+#!/bin/bash
+#
+# XXX crossbuild: only ppc64
+#
+# (todo) compute tarch (instead of list them)
+# (todo) combine native and tarch loop (1 loop)
+# (todo) command-line option to restrict to a given tarch
+# (todo) command-line option to skip build on native arch
+# (todo) command-line option to enable testing (native arch)
+# (todo) store output logs
+# (todo) keep in git repo
+# (todo) zap and bootstrap for each build ? (more secure)
+#
+# 2021-08-14 all in main/ :
+# * packaging status (only native and ppc64):
+#   OK   arch=native pkg main/ccache
+#   OK   arch=native pkg main/strace
+#   OK   arch=native pkg main/db
+#   OK   arch=native pkg main/nvi
+#   OK   arch=native pkg main/m4
+#   OK   arch=native pkg main/autoconf
+#   OK   arch=native pkg main/automake
+#   OK   arch=native pkg main/musl-legacy-compat
+#   OK   arch=native pkg main/uthash
+#   OK   arch=native pkg main/librsync
+#   OK   arch=native pkg main/burp
+#   OK   arch=native pkg main/libuv
+#   OK   arch=native pkg main/msgpack
+#   FAIL arch=native pkg main/neovim
+#   OK   arch=native pkg main/libmd
+#   OK   arch=native pkg main/libbsd
+#   FAIL arch=native pkg main/nvi2 ........ XXX unexpected
+#   OK   arch=ppc64 pkg main/ccache
+#   OK   arch=ppc64 pkg main/strace
+#   OK   arch=ppc64 pkg main/db
+#   OK   arch=ppc64 pkg main/nvi
+#   OK   arch=ppc64 pkg main/m4
+#   OK   arch=ppc64 pkg main/autoconf
+#   OK   arch=ppc64 pkg main/automake
+#   OK   arch=ppc64 pkg main/musl-legacy-compat
+#   OK   arch=ppc64 pkg main/uthash
+#   OK   arch=ppc64 pkg main/librsync
+#   OK   arch=ppc64 pkg main/burp
+#   OK   arch=ppc64 pkg main/libuv
+#   OK   arch=ppc64 pkg main/msgpack
+#   FAIL arch=ppc64 pkg main/neovim
+#   OK   arch=ppc64 pkg main/libmd
+#   OK   arch=ppc64 pkg main/libbsd
+#   FAIL arch=ppc64 pkg staging/nvi2 ........... XXX unexpected
+
+# 2021-08-04 reset to 28jul x86_64 stage2 packages.
+#
+# * summary 05aug based on rev ca9bf2c (master branch):
+#   all OK except:
+#   FAIL arch=native pkg neovim
+#   FAIL arch=native pkg nvi2
+#   FAIL arch=ppc64 pkg neovim
+#   FAIL arch=aarch64 pkg neovim
+#   FAIL arch=riscv64 pkg neovim
+#   FAIL arch=ppc64le pkg neovim
+#   FAIL arch=ppc64 pkg nvi2
+#   FAIL arch=aarch64 pkg nvi2
+#   FAIL arch=riscv64 pkg nvi2
+#   FAIL arch=ppc64le pkg nvi2
+
+
+# known status
+kb="""
+  - neovim   FAIL build broken (wip)
+  - nvi2     FAIL build broken (wip)
+"""
+
+pkglist=
+pkglist+=" main/ccache main/strace main/db main/nvi"
+pkglist+=" main/m4 main/autoconf main/automake main/musl-legacy-compat"
+pkglist+=" main/uthash main/librsync main/burp"
+pkglist+=" main/libuv main/msgpack main/neovim"
+pkglist+=" main/libmd main/libbsd main/nvi2"
+
+tarch=
+tarch+=" ppc64"
+#tarch+=" aarch64"
+#tarch+=" riscv64"
+#tarch+=" ppc64le"
+
+# all available target arch
+#tarch="$(ls cbuild/build_profiles/*.ini | xargs -I% -n 1 basename % .ini | grep -vw bootstrap | grep -vw $(uname -m))"
+
+summary=
+
+echo "# create a scratch build env ..."
+set -e
+./cbuild.py zap
+./cbuild.py binary-bootstrap > /dev/null
+set +e
+
+# native arch first
+for pkg in ${pkglist}
+do
+    st=FAIL
+    ./cbuild.py clean
+    ./cbuild.py --force pkg ${pkg}
+    [ $? -eq 0 ] && st="OK  "
+    item="${st} arch=native pkg ${pkg}"
+    echo "# ${item}"
+    summary+="${item}\n"
+    echo "# rebuild PARTIAL summary:"
+    echo -e "${summary}"
+done
+
+# target arch by a given package
+for pkg in ${pkglist}
+do
+    for arch in ${tarch}
+    do
+        st=FAIL
+        echo "# arch=${arch} build ${pkg} ..."
+        ./cbuild.py clean
+        ./cbuild.py --force -a ${arch} pkg ${pkg}
+        [ $? -eq 0 ] && st="OK  "
+        item="${st} arch=${arch} pkg ${pkg}"
+        echo "# ${item}"
+        summary+="${item}\n"
+        echo "# rebuild PARTIAL summary:"
+        echo -e "${summary}"
+    done
+done
+
+echo
+echo "---------------------------------------------"
+echo "known status:"
+echo -e "${kb}"
+echo "---------------------------------------------"
+echo
+echo "---------------------------------------------"
+echo "Summary:"
+echo -e "${summary}"
+echo "---------------------------------------------"

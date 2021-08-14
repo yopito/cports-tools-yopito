@@ -1,0 +1,133 @@
+#! /bin/bash
+#
+# purpose: build chimera package(s) using a fresh build env
+#          for each of them.
+#          store output in a log file.
+#
+# XXX WIP, not yet functional
+# XXX package content is missing
+# XXX subpkg content is missing
+# XXX cbuild.py does not expose (yet) any of its parameters:
+#     makes difficult to retrieve generated binary package filename, etc.
+# XXX cbuild.py stdout/stderr is catched but out of order
+# XXX usage a temporary masterdir ?
+# XXX order packages to build by their dependency
+# XXX option to build for several arch at once
+# XXX handle if called from another dir
+# XXX usage()
+#
+# 20210814 initial revision
+
+usage() {
+cat << EOFusage
+
+Usage: $0 [-n] [-h] [cbuild_flags] [pkg1 [pkg2 ] ... ]
+
+  -n            dry run
+  -h            this help
+  #-q           enable check (testing) for native arch package(s)
+  cbuild_flags  QUOTE THEM if any (like '-a <arch> -m <dir> ...')
+  pkg1 pkg2 ... list of package(s) to build or retrieved from git
+
+  Each package is built one by one in a fresh masterdir,
+  #ordered by their dependency order.
+  If no package are requested, retrieve the list of them from git against the
+  master branch.
+  Build output and package(s) infos are stored in timestamped log files.
+
+  Examples:
+
+    * build main/foo package for native arch:
+      $0 main/foo
+
+    * crossbuild main/foo package for riscv64 target arch:
+      $0 '-a riscv64' main/foo
+
+    * crossbuild all package in current git branch for aarch64:
+      $0 '-a aarch64'
+
+    * check output of build log(s) in the meantime:
+      $ watch -n 5 "ls -1tr log/*/*.log | tail -n 3 | xargs du -sk && echo && ls -1tr log/*/*.log | tail -n 1 | xargs tail"
+EOFusage
+}
+
+exec_or_dry() {
+  # $1: command to execute
+  # $2: do not exit if set and command returns != 0
+  if [ "$DRY" = 1 ]; then
+    echo "# dry cmd: $1"
+    return 0
+  fi
+  echo "# cmd: $1"
+  eval "$1"
+  if [ $? -ne 0 ]; then
+    echo "# ERROR on cmd."
+    if  [ -z "$2" ]; then
+      echo "# exiting requested: stop here"
+      exit 1
+    fi
+  fi
+}
+
+## start
+DRY=
+PKGlist=
+Bargs=
+ts="$(date '+%Y-%m-%d_%H%M%S')"
+
+exec_or_dry "test -x ./cbuild.py"
+
+[ ! -d "log" ] && ( echo "creating log/ ..." ; mkdir log )
+
+# handle command line arguments
+for arg; do
+  case $arg in
+    -n)        DRY=1 ;;
+    -h|--help) usage && exit 0 ;;
+    -q)        echo "-q not yet available." ; exit 1 ;;
+    -*)        Bargs="$Bargs $arg" ;;
+    *)         PKGlist="$PKGlist $arg"
+  esac
+done
+
+# lstrip space
+Bargs="${Bargs# }"
+
+echo
+echo "# input cbuild args: $Bargs"
+
+# XXX split args regarding target arch ?
+
+echo "# package(s) requested to build: $PKGlist"
+if [ "$PKGlist" = "" ]
+then
+  echo "# no package requested: retrieve list against git master branch ..."
+  PKGlist=$(git diff master --name-only --diff-filter=AM |
+            grep -F "/template.py" |
+            xargs -n 1 dirname |
+            tr '\n' ' '
+           )
+fi
+echo "# package(s) to build: $PKGlist"
+echo "# XXX packages are not sorted by their build depedency yet"
+
+# loop on each package to build
+for pkg in $PKGlist; do
+  echo
+  # XXX tarch not yet computed
+  # pkgname in the form <dir>/<pkg>
+  LOGdir="log/${ts}.${pkg/\//.}${tarch}"
+  LOGf="${LOGdir}/$(basename ${pkg}).build.log"
+
+  echo "# [$pkg] create a fresh masterdir ..."
+  exec_or_dry "./cbuild.py zap"
+  exec_or_dry "./cbuild.py binary-bootstrap > /dev/null"
+
+  echo "# [$pkg] let's build ... logfile: $LOGf"
+  exec_or_dry "mkdir -p $(dirname $(realpath -m $LOGf))"
+  exec_or_dry "(2>&1 ./cbuild.py --force --no-color ${Bargs} pkg ${pkg}) > ${LOGf}"
+
+  echo "# XXX missing package content"
+  echo "# XXX missing subpackage(s) content"
+done
+echo "# That's all folks !"
