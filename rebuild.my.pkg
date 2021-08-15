@@ -1,15 +1,16 @@
 #!/bin/bash
 #
-# XXX crossbuild: only ppc64
+# XXX crossbuild: restrict to ppc64 (ongoing tool testing)
 #
+# (todo) only main category is currently supported by cbuild.py
+# (todo) reuse build.scratch
+#   (todo) store output logs
+#   (todo) zap and bootstrap for each build ? (more secure)
 # (todo) compute tarch (instead of list them)
 # (todo) combine native and tarch loop (1 loop)
 # (todo) command-line option to restrict to a given tarch
 # (todo) command-line option to skip build on native arch
 # (todo) command-line option to enable testing (native arch)
-# (todo) store output logs
-# (todo) keep in git repo
-# (todo) zap and bootstrap for each build ? (more secure)
 #
 # 2021-08-14 all in main/ :
 # * packaging status (only native and ppc64):
