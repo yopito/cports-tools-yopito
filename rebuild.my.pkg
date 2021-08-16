@@ -72,11 +72,12 @@ pkglist=
 # ccache is known to build everywhere
 pkglist+=" main/ccache"
 pkglist+=" contrib/strace"
+pkglist+=" contrib/db contrib/nvi"
+pkglist+=" contrib/m4 contrib/autoconf contrib/automake"
+pkglist+=" contrib/uthash contrib/librsync contrib/musl-legacy-compat"
+pkglist+=" contrib/burp"
 
 # XXX rework needed
-#pkglist+=" main/db main/nvi"
-#pkglist+=" main/m4 main/autoconf main/automake main/musl-legacy-compat"
-#pkglist+=" main/uthash main/librsync main/burp"
 #pkglist+=" main/libuv main/msgpack main/neovim"
 #pkglist+=" main/libmd main/libbsd main/nvi2"
 
