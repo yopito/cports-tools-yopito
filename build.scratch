@@ -6,7 +6,6 @@
 #
 # XXX WIP, not yet functional
 #
-# XXX tarch does not appear in folder name
 # XXX package content is missing
 # XXX subpkg content is missing
 # XXX cbuild.py stdout/stderr is catched but out of order
@@ -99,7 +98,13 @@ Bargs="${Bargs# }"
 echo
 echo "# input cbuild args: $Bargs"
 
-# XXX split args regarding target arch ?
+# retrieve target arch
+tarch="${Bargs#*-a }"
+if [ "$tarch" = "${Bargs}" ]; then
+  tarch="$(uname -m)"
+else
+  tarch="${tarch%% *}"
+fi
 
 echo "# package(s) requested to build: $PKGlist"
 if [ "$PKGlist" = "" ]
@@ -117,16 +122,15 @@ echo "# XXX packages are not sorted by their build depedency yet"
 # loop on each package to build
 for pkg in $PKGlist; do
   echo
-  # XXX tarch not yet computed
   # pkgname in the form <dir>/<pkg>
-  LOGdir="log/${ts}.${pkg/\//.}${tarch}"
+  LOGdir="log/${ts}.${pkg/\//.}.${tarch}"
   LOGf="${LOGdir}/$(basename ${pkg}).build.log"
 
   echo "# [$pkg] create a fresh masterdir ..."
   exec_or_dry "./cbuild.py zap"
   exec_or_dry "./cbuild.py binary-bootstrap > /dev/null"
 
-  echo "# [$pkg] let's build ... logfile: $LOGf"
+  echo "# [$pkg] build logfile: $LOGf"
   exec_or_dry "mkdir -p $(dirname $(realpath -m $LOGf))"
   exec_or_dry "(2>&1 ./cbuild.py --force --no-color ${Bargs} pkg ${pkg}) > ${LOGf}"
 
