@@ -5,66 +5,105 @@
 # (todo) command-line option to skip build on native arch
 # (todo) command-line option to enable testing (native arch)
 #
+# 2021-08-20 db 1.85 and nvi2 are fine
 # 2021-08-16 reuse ./build.scratch
 # 2021-08-16 target unified, native arch first
-# 2021-08-14 all in main/ :
-# * packaging status (only native and ppc64):
-#   OK   arch=native pkg main/ccache
-#   OK   arch=native pkg main/strace
-#   OK   arch=native pkg main/db
-#   OK   arch=native pkg main/nvi
-#   OK   arch=native pkg main/m4
-#   OK   arch=native pkg main/autoconf
-#   OK   arch=native pkg main/automake
-#   OK   arch=native pkg main/musl-legacy-compat
-#   OK   arch=native pkg main/uthash
-#   OK   arch=native pkg main/librsync
-#   OK   arch=native pkg main/burp
-#   OK   arch=native pkg main/libuv
-#   OK   arch=native pkg main/msgpack
-#   FAIL arch=native pkg main/neovim
-#   OK   arch=native pkg main/libmd
-#   OK   arch=native pkg main/libbsd
-#   FAIL arch=native pkg main/nvi2 ........ XXX unexpected
-#   OK   arch=ppc64 pkg main/ccache
-#   OK   arch=ppc64 pkg main/strace
-#   OK   arch=ppc64 pkg main/db
-#   OK   arch=ppc64 pkg main/nvi
-#   OK   arch=ppc64 pkg main/m4
-#   OK   arch=ppc64 pkg main/autoconf
-#   OK   arch=ppc64 pkg main/automake
-#   OK   arch=ppc64 pkg main/musl-legacy-compat
-#   OK   arch=ppc64 pkg main/uthash
-#   OK   arch=ppc64 pkg main/librsync
-#   OK   arch=ppc64 pkg main/burp
-#   OK   arch=ppc64 pkg main/libuv
-#   OK   arch=ppc64 pkg main/msgpack
-#   FAIL arch=ppc64 pkg main/neovim
-#   OK   arch=ppc64 pkg main/libmd
-#   OK   arch=ppc64 pkg main/libbsd
-#   FAIL arch=ppc64 pkg staging/nvi2 ........... XXX unexpected
-
-# 2021-08-04 reset to 28jul x86_64 stage2 packages.
 #
-# * summary 05aug based on rev ca9bf2c (master branch):
-#   all OK except:
-#   FAIL arch=native pkg neovim
-#   FAIL arch=native pkg nvi2
-#   FAIL arch=ppc64 pkg neovim
-#   FAIL arch=aarch64 pkg neovim
-#   FAIL arch=riscv64 pkg neovim
-#   FAIL arch=ppc64le pkg neovim
-#   FAIL arch=ppc64 pkg nvi2
-#   FAIL arch=aarch64 pkg nvi2
-#   FAIL arch=riscv64 pkg nvi2
-#   FAIL arch=ppc64le pkg nvi2
-
+# 2021-08-20 Summary with master rev d2f9320:
+#      OK   arch=x86_64 pkg main/ccache
+#      OK   arch=aarch64 pkg main/ccache
+#      OK   arch=ppc64 pkg main/ccache
+#      OK   arch=ppc64le pkg main/ccache
+#      OK   arch=riscv64 pkg main/ccache
+#      OK   arch=x86_64 pkg contrib/strace
+#      OK   arch=aarch64 pkg contrib/strace
+#      OK   arch=ppc64 pkg contrib/strace
+#      OK   arch=ppc64le pkg contrib/strace
+#      OK   arch=riscv64 pkg contrib/strace
+#      OK   arch=x86_64 pkg contrib/db5
+#      FAIL arch=aarch64 pkg contrib/db5
+#      OK   arch=ppc64 pkg contrib/db5
+#      OK   arch=ppc64le pkg contrib/db5
+#      OK   arch=riscv64 pkg contrib/db5
+#      OK   arch=x86_64 pkg contrib/nvi
+#      OK   arch=aarch64 pkg contrib/nvi
+#      OK   arch=ppc64 pkg contrib/nvi
+#      OK   arch=ppc64le pkg contrib/nvi
+#      OK   arch=riscv64 pkg contrib/nvi
+#      OK   arch=x86_64 pkg contrib/m4
+#      OK   arch=aarch64 pkg contrib/m4
+#      OK   arch=ppc64 pkg contrib/m4
+#      OK   arch=ppc64le pkg contrib/m4
+#      OK   arch=riscv64 pkg contrib/m4
+#      OK   arch=x86_64 pkg contrib/autoconf
+#      OK   arch=aarch64 pkg contrib/autoconf
+#      OK   arch=ppc64 pkg contrib/autoconf
+#      OK   arch=ppc64le pkg contrib/autoconf
+#      OK   arch=riscv64 pkg contrib/autoconf
+#      OK   arch=x86_64 pkg contrib/automake
+#      OK   arch=aarch64 pkg contrib/automake
+#      OK   arch=ppc64 pkg contrib/automake
+#      OK   arch=ppc64le pkg contrib/automake
+#      OK   arch=riscv64 pkg contrib/automake
+#      OK   arch=x86_64 pkg contrib/uthash
+#      FAIL arch=aarch64 pkg contrib/uthash
+#      OK   arch=ppc64 pkg contrib/uthash
+#      OK   arch=ppc64le pkg contrib/uthash
+#      OK   arch=riscv64 pkg contrib/uthash
+#      FAIL arch=x86_64 pkg contrib/librsync
+#      OK   arch=aarch64 pkg contrib/librsync
+#      OK   arch=ppc64 pkg contrib/librsync
+#      OK   arch=ppc64le pkg contrib/librsync
+#      OK   arch=riscv64 pkg contrib/librsync
+#      OK   arch=x86_64 pkg contrib/musl-legacy-compat
+#      OK   arch=aarch64 pkg contrib/musl-legacy-compat
+#      OK   arch=ppc64 pkg contrib/musl-legacy-compat
+#      OK   arch=ppc64le pkg contrib/musl-legacy-compat
+#      OK   arch=riscv64 pkg contrib/musl-legacy-compat
+#      OK   arch=x86_64 pkg contrib/burp
+#      OK   arch=aarch64 pkg contrib/burp
+#      OK   arch=ppc64 pkg contrib/burp
+#      OK   arch=ppc64le pkg contrib/burp
+#      OK   arch=riscv64 pkg contrib/burp
+#      OK   arch=x86_64 pkg contrib/libuv
+#      OK   arch=aarch64 pkg contrib/libuv
+#      OK   arch=ppc64 pkg contrib/libuv
+#      OK   arch=ppc64le pkg contrib/libuv
+#      OK   arch=riscv64 pkg contrib/libuv
+#      OK   arch=x86_64 pkg contrib/msgpack
+#      OK   arch=aarch64 pkg contrib/msgpack
+#      OK   arch=ppc64 pkg contrib/msgpack
+#      OK   arch=ppc64le pkg contrib/msgpack
+#      OK   arch=riscv64 pkg contrib/msgpack
+#      FAIL arch=x86_64 pkg contrib/neovim
+#      FAIL arch=aarch64 pkg contrib/neovim
+#      FAIL arch=ppc64 pkg contrib/neovim
+#      FAIL arch=ppc64le pkg contrib/neovim
+#      FAIL arch=riscv64 pkg contrib/neovim
+#      OK   arch=x86_64 pkg contrib/libmd
+#      OK   arch=aarch64 pkg contrib/libmd
+#      OK   arch=ppc64 pkg contrib/libmd
+#      OK   arch=ppc64le pkg contrib/libmd
+#      OK   arch=riscv64 pkg contrib/libmd
+#      OK   arch=x86_64 pkg contrib/libbsd
+#      OK   arch=aarch64 pkg contrib/libbsd
+#      OK   arch=ppc64 pkg contrib/libbsd
+#      OK   arch=ppc64le pkg contrib/libbsd
+#      OK   arch=riscv64 pkg contrib/libbsd
+#      OK   arch=x86_64 pkg contrib/db
+#      OK   arch=aarch64 pkg contrib/db
+#      OK   arch=ppc64 pkg contrib/db
+#      OK   arch=ppc64le pkg contrib/db
+#      OK   arch=riscv64 pkg contrib/db
+#      OK   arch=x86_64 pkg contrib/nvi2
+#      OK   arch=aarch64 pkg contrib/nvi2
+#      OK   arch=ppc64 pkg contrib/nvi2
+#      OK   arch=ppc64le pkg contrib/nvi2
+#      OK   arch=riscv64 pkg contrib/nvi2
 
 # known status
 kb="""
-  - XXX still some package in main/
   - neovim   FAIL build broken (wip)
-  - nvi2     FAIL build broken (wip)
 """
 
 # list of package to rebuild
@@ -72,14 +111,12 @@ pkglist=
 # ccache is known to build everywhere
 pkglist+=" main/ccache"
 pkglist+=" contrib/strace"
-pkglist+=" contrib/db contrib/nvi"
+pkglist+=" contrib/db5 contrib/nvi"
 pkglist+=" contrib/m4 contrib/autoconf contrib/automake"
 pkglist+=" contrib/uthash contrib/librsync contrib/musl-legacy-compat"
 pkglist+=" contrib/burp"
-
-# XXX rework needed
-#pkglist+=" main/libuv main/msgpack main/neovim"
-#pkglist+=" main/libmd main/libbsd main/nvi2"
+pkglist+=" contrib/libuv contrib/msgpack contrib/neovim"
+pkglist+=" contrib/libmd contrib/libbsd contrib/db contrib/nvi2"
 
 # native arch
 narch=$(uname -m)
