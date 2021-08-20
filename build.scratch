@@ -5,15 +5,18 @@
 #          store output in a log file.
 #
 # XXX WIP, not yet functional
+#
+# XXX tarch does not appear in folder name
 # XXX package content is missing
 # XXX subpkg content is missing
+# XXX cbuild.py stdout/stderr is catched but out of order
 # XXX cbuild.py does not expose (yet) any of its parameters:
 #     makes difficult to retrieve generated binary package filename, etc.
-# XXX cbuild.py stdout/stderr is catched but out of order
+# XXX will need a masterdir to compute stuff before any build
 # XXX usage a temporary masterdir ?
 # XXX order packages to build by their dependency
 # XXX option to build for several arch at once
-# XXX handle if called from another dir
+# XXX handle this script called from another dir
 # XXX usage()
 #
 # 20210814 initial revision
