@@ -100,6 +100,7 @@ echo "# input cbuild args: $Bargs"
 
 # retrieve target arch
 tarch="${Bargs#*-a }"
+tarch="${tarch#*--arch }"
 if [ "$tarch" = "${Bargs}" ]; then
   tarch="$(uname -m)"
 else
