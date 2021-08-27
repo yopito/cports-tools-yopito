@@ -2,22 +2,18 @@
 #
 # purpose: build chimera package(s) using a fresh build env
 #          for each of them.
-#          store output in a log file.
+#          store build output in a log file and generated package(s) info too.
 #
-# XXX WIP, not yet functional
-#
-# XXX package content is missing
-# XXX subpkg content is missing
-# XXX cbuild.py stdout/stderr is catched but out of order
-# XXX cbuild.py does not expose (yet) any of its parameters:
-#     makes difficult to retrieve generated binary package filename, etc.
-# XXX will need a masterdir to compute stuff before any build
-# XXX usage a temporary masterdir ?
+# XXX apkroot_create(): use exec_or_dry(), control return code
+# XXX exec_or_dry(): add silent mode
+# XXX cbuild.py stdout/stderr is captured out of order
+# XXX cbuild.py does not expose (yet) any of its parameters: have to parse
+#     build output, can't compute order of package to build.
+# XXX use a temporary masterdir ?
 # XXX order packages to build by their dependency
 # XXX option to build for several arch at once
-# XXX handle this script called from another dir
-# XXX usage()
 #
+# 20210829 info file for each build or generated (sub)packages
 # 20210814 initial revision
 
 usage() {
@@ -32,7 +28,7 @@ Usage: $0 [-n] [-h] [cbuild_flags] [pkg1 [pkg2 ] ... ]
   pkg1 pkg2 ... list of package(s) to build or retrieved from git
 
   Each package is built one by one in a fresh masterdir,
-  #ordered by their dependency order.
+  #not yet# ordered by their dependency order.
   If no package are requested, retrieve the list of them from git against the
   master branch.
   Build output and package(s) infos are stored in timestamped log files.
@@ -69,6 +65,18 @@ exec_or_dry() {
       exit 1
     fi
   fi
+}
+
+apkroot_create() {
+  if [ "$1" = "" ]; then
+    echo "[ERROR] usage: apkroot_create /path/to/create"
+    return 1
+  fi
+  mkdir -p "${1}/etc/apk"
+  mkdir -p "${1}/usr/lib/apk/db"
+  mkdir -p "${1}/var/cache/apk"
+  touch "${1}/usr/lib/apk/db/installed"
+  touch "${1}/etc/apk/world"
 }
 
 ## start
@@ -135,7 +143,48 @@ for pkg in $PKGlist; do
   exec_or_dry "mkdir -p $(dirname $(realpath -m $LOGf))"
   exec_or_dry "(2>&1 ./cbuild.py --force --no-color ${Bargs} pkg ${pkg}) > ${LOGf}"
 
-  echo "# XXX missing package content"
-  echo "# XXX missing subpackage(s) content"
+  # create a temp apkroot
+  apkroot="$(mktemp -d /tmp/apkroot.XXXXXXXX)"
+  apkroot_create ${apkroot}
+
+  # retrieve generated package(s) and their repo.
+  # From build log since cbuild does not provide this info.
+  # However, this will catch any other package that had to be rebuild
+  pkgraw="$( grep -E '^=> Creating .+ in repository .+' ${LOGf})"
+  if [ "${pkgraw}" = "" ]; then
+    echo "[ERROR] found no generated packge in ${LOGf}"
+    rm -rf ${apkroot}
+    exit 1
+  fi
+
+  # loop on subpackages, possibly with different repos
+  # XXX detect skipped (invalid) list item
+  echo "${pkgraw}" | awk '{print $3,$6}' | sed -e 's,\.\.\.$,,'  \
+  | while read rawspkg rawrepo; do
+    # strip arch
+    repo="$(dirname $rawrepo)"
+    # strip package extension, revision and version
+    subpkg=${rawspkg%.apk}
+    subpkg=${subpkg%-r*}
+    subpkg=${subpkg%-*}
+
+    if [ ! -d "${repo}" ]; then
+      echo "[ERROR] subpkg $subpkg: non existent path repo=$repo"
+      continue
+    fi
+
+    subpkgLOG="${LOGdir}/${subpkg}.apk.info"
+
+    echo "# [$pkg] dump subpkg $subpkg info into ${subpkgLOG}"
+
+    echo "# apk metadata info" >> ${subpkgLOG}
+    apkopt="--root ${apkroot} --arch ${tarch} --allow-untrusted --repository ${repo}"
+    exec_or_dry "apk ${apkopt} info -a ${subpkg} >> ${subpkgLOG}"
+
+    # apk lists files only for installed packages, so let's use tar
+    echo "# package listing (sorted)" >> ${subpkgLOG}
+    exec_or_dry "2> /dev/null tar tzf ${rawrepo}/${rawspkg} | sort >> ${subpkgLOG}"
+  done
+  rm -rf ${apkroot}
 done
 echo "# That's all folks !"
