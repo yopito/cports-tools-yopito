@@ -126,7 +126,7 @@ then
            )
 fi
 echo "# package(s) to build: $PKGlist"
-echo "# XXX packages are not sorted by their build depedency yet"
+echo "# XXX packages are not ordered by their build depedency yet"
 
 # loop on each package to build
 for pkg in $PKGlist; do
@@ -182,8 +182,8 @@ for pkg in $PKGlist; do
     exec_or_dry "apk ${apkopt} info -a ${subpkg} >> ${subpkgLOG}"
 
     # apk lists files only for installed packages, so let's use tar
-    echo "# package listing (sorted)" >> ${subpkgLOG}
-    exec_or_dry "2> /dev/null tar tzvf ${rawrepo}/${rawspkg} | sort >> ${subpkgLOG}"
+    echo "# package listing" >> ${subpkgLOG}
+    exec_or_dry "2> /dev/null tar tzvf ${rawrepo}/${rawspkg} >> ${subpkgLOG}"
   done
   rm -rf ${apkroot}
 done
