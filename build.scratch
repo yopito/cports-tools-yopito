@@ -183,7 +183,7 @@ for pkg in $PKGlist; do
 
     # apk lists files only for installed packages, so let's use tar
     echo "# package listing (sorted)" >> ${subpkgLOG}
-    exec_or_dry "2> /dev/null tar tzf ${rawrepo}/${rawspkg} | sort >> ${subpkgLOG}"
+    exec_or_dry "2> /dev/null tar tzvf ${rawrepo}/${rawspkg} | sort >> ${subpkgLOG}"
   done
   rm -rf ${apkroot}
 done
