@@ -6,39 +6,66 @@
 # (todo) command-line option to skip build on native arch
 # (todo) command-line option to enable testing (native arch)
 #
+# 2021-08-28 support package list from command line.
+#            Internal package list become the default one (if no list provided)
 # 2021-08-25 pkg list: +dialog, +zsh, comment DEPRECATED pkg
 # 2021-08-20 db 1.85 and nvi2 are fine
 # 2021-08-16 reuse ./build.scratch
 # 2021-08-16 target unified, native arch first
-#
+
 # known status
 kb="""
   - neovim   FAIL build broken (wip)
   - db       XXX crossbuild status unknown
 """
 
-# list of package to rebuild
-pkglist=
+# default list of package to build
+dpkglist=
 # ccache is known to build everywhere
-pkglist+=" main/ccache"
-pkglist+=" contrib/dialog"
-pkglist+=" contrib/zsh"
-pkglist+=" contrib/strace"
-pkglist+=" contrib/db5 contrib/nvi"
-pkglist+=" contrib/m4 contrib/autoconf contrib/automake"
-pkglist+=" contrib/uthash contrib/librsync contrib/musl-legacy-compat"
-pkglist+=" contrib/burp"
-pkglist+=" contrib/libuv contrib/msgpack contrib/neovim"
-pkglist+=" contrib/libmd contrib/libbsd contrib/db contrib/nvi2"
-pkglist+=" contrib/zsh"
-
+dpkglist+=" main/ccache"
+dpkglist+=" contrib/dialog"
+dpkglist+=" contrib/zsh"
+dpkglist+=" contrib/strace"
+dpkglist+=" contrib/db5 contrib/nvi"
+dpkglist+=" contrib/m4 contrib/autoconf contrib/automake"
+dpkglist+=" contrib/uthash contrib/librsync contrib/musl-legacy-compat"
+dpkglist+=" contrib/burp"
+dpkglist+=" contrib/libuv contrib/msgpack contrib/neovim"
+dpkglist+=" contrib/libmd contrib/libbsd contrib/db contrib/nvi2"
+dpkglist+=" contrib/zsh"
 # deprecated packages
-#pkglist+=" contrib/db18"
-#pkglist+=" contrib/db1"
+#dpkglist+=" contrib/db18"
+#dpkglist+=" contrib/db1"
+
+usage() {
+cat << EOFusage
+
+Usage: $0 [-n] [-h] [pkg1 [pkg2 ] ... ]
+
+  #-n            dry run
+  -h            this help
+  pkg1 pkg2 ... list of package(s) to build. If not, use hardcoded list.
+
+  Each package is built in a fresh masterdir for each available architecture,
+  by using build.scratch script.
+  
+  A summary of builds is printed.
+
+  Examples:
+
+    * build main/foo package for all supported architectures:
+      $0 main/foo
+
+EOFusage
+}
+
+summary=
+
+# list of package to build
+pkglist=
 
 # native arch
 narch=$(uname -m)
-
 
 # all target arch with native first
 # (for instance: x86_64 ppc64 aarch64 riscv64 ppc64le)
@@ -46,8 +73,17 @@ tarch=
 tarch="$(ls cbuild/build_profiles/*.ini | xargs -I% -n 1 basename % .ini | grep -vw bootstrap | grep -vw ${narch})"
 tarch="${narch} ${tarch}"
 
+# handle command line arguments
+for arg; do
+  case $arg in
+    -h|--help) usage && exit 0 ;;
+    *)         pkglist="${pkglist} $arg"
+  esac
+done
 
-summary=
+[ "$pkglist" = "" ] && pkglist="$dpkglist"
+echo "# list of package to build:"
+echo $pkglist
 
 if [ ! -x "./build.scratch" ]
 then
@@ -72,8 +108,10 @@ do
     done
 done
 
-echo
-echo "---------------------------------------------"
-echo "known status:"
-echo -e "${kb}" | column -t
-echo "---------------------------------------------"
+if [ "$pkglist" = "$dpkstlist" ]; then
+  echo
+  echo "---------------------------------------------"
+  echo "known status:"
+  echo -e "${kb}" | column -t
+  echo "---------------------------------------------"
+fi
