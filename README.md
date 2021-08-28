@@ -1,9 +1,11 @@
 # cports-tools-yopito
+
 various tools around chimera-linux cports
 
 *Contents*
 
 * [build.scratch](#build.scratch)
+* [rebuild.my.pkg](#rebuild.my.pkg)
 
 <a id="build.scratch"></a>
 ## build.scratch
@@ -14,12 +16,12 @@ various tools around chimera-linux cports
   This helps on tracking dependencies, since build environment is not polluted
   from a previous build.
 
-* store output into timestamped logfile: `log/<date>.<pkgname>/<pkgname>.build.log`  
+* store output into timestamped logfile `log/<date>.<category>.<pkgname>.<arch>/<pkgname>.build.log`  
   Helps comparing with previous build.
 
-* (todo) keep information of package content within a a file: `log/<date>.<pkgname>/<pkgname>.apk.info`  
-  includes package metadata, (sorted) depedencies, (sorted) file list content.  
-  If a package contains subpackages, each subpackage is also caracterized : file `log/<date>.<pkgname>/<subpkg>.apk.info`
+* dump package information into logfile `log/<date>.<category>.<pkgname>.<arch>/<gen-package>.apk.info`  
+  include all apk metadata and file list content.  
+  There is a file for each built or generated package.
 
 * (todo) order packaging build according to their required dependency
 
@@ -38,4 +40,10 @@ Detailed usage : `$ ./build.scratch -h`
 
 ### (todo) Example
 
+
+<a id="rebuild.my.pkg"></a>
+## rebuild.my.pkg
+
+A loop to build a (hardcoded) list of packages for all target architecures.  
+Use `build.scratch` for each build and display a summary of builds.
 
