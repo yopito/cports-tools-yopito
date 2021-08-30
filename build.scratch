@@ -133,7 +133,7 @@ for pkg in $PKGlist; do
   echo
   # pkgname in the form <dir>/<pkg>
   LOGdir="log/${ts}.${pkg/\//.}.${tarch}"
-  LOGf="${LOGdir}/$(basename ${pkg}).build.log"
+  LOGf="${LOGdir}/build.log"
 
   echo "# [$pkg] create a fresh masterdir ..."
   exec_or_dry "./cbuild.py zap"

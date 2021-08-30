@@ -16,7 +16,7 @@ various tools around chimera-linux cports
   This helps on tracking dependencies, since build environment is not polluted
   from a previous build.
 
-* store output into timestamped logfile `log/<date>.<category>.<pkgname>.<arch>/<pkgname>.build.log`  
+* store output into timestamped logfile `log/<date>.<category>.<pkgname>.<arch>/build.log`  
   Helps comparing with previous build.
 
 * dump package information into logfile `log/<date>.<category>.<pkgname>.<arch>/<gen-package>.apk.info`  
