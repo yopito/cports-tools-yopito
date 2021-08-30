@@ -1,9 +1,9 @@
 #! /bin/bash
 #
-# purpose: build chimera package(s) using a fresh build env
-#          for each of them.
-#          store build output in a log file and generated package(s) info too.
+# purpose: build chimera package(s) using a fresh build env for each of them.
+#          store in log files: build output, generated packages data.
 #
+# XXX missing cbuild options in folder name
 # XXX apkroot_create(): use exec_or_dry(), control return code
 # XXX exec_or_dry(): add silent mode
 # XXX cbuild.py stdout/stderr is captured out of order
@@ -23,7 +23,6 @@ Usage: $0 [-n] [-h] [cbuild_flags] [pkg1 [pkg2 ] ... ]
 
   -n            dry run
   -h            this help
-  #-q           enable check (testing) for native arch package(s)
   cbuild_flags  QUOTE THEM if any (like '-a <arch> -m <dir> ...')
   pkg1 pkg2 ... list of package(s) to build or retrieved from git
 
@@ -59,7 +58,7 @@ exec_or_dry() {
   echo "# cmd: $1"
   eval "$1"
   if [ $? -ne 0 ]; then
-    echo "# ERROR on cmd."
+    echo "# cmd FAILED"
     if  [ -z "$2" ]; then
       echo "# exiting requested: stop here"
       exit 1
@@ -94,7 +93,6 @@ for arg; do
   case $arg in
     -n)        DRY=1 ;;
     -h|--help) usage && exit 0 ;;
-    -q)        echo "-q not yet available." ; exit 1 ;;
     -*)        Bargs="$Bargs $arg" ;;
     *)         PKGlist="$PKGlist $arg"
   esac
@@ -131,6 +129,8 @@ echo "# XXX packages are not ordered by their build depedency yet"
 # loop on each package to build
 for pkg in $PKGlist; do
   echo
+  exec_or_dry "test -f ${pkg}/template.py"
+
   # pkgname in the form <dir>/<pkg>
   LOGdir="log/${ts}.${pkg/\//.}.${tarch}"
   LOGf="${LOGdir}/build.log"
