@@ -3,6 +3,8 @@
 # purpose: build chimera package(s) using a fresh build env for each of them.
 #          store in log files: build output, generated packages data.
 #
+# XXX if failure on (main) package build, don't exit too early: have to check
+#     if some subpackage have not been built.
 # XXX missing cbuild options in folder name
 # XXX apkroot_create(): use exec_or_dry(), control return code
 # XXX exec_or_dry(): add silent mode
@@ -13,6 +15,7 @@
 # XXX order packages to build by their dependency
 # XXX option to build for several arch at once
 #
+# 20210902 generated subpkg info: handle arch of generated package (fix)
 # 20210829 info file for each build or generated (sub)packages
 # 20210814 initial revision
 
@@ -143,7 +146,7 @@ for pkg in $PKGlist; do
   exec_or_dry "mkdir -p $(dirname $(realpath -m $LOGf))"
   exec_or_dry "(2>&1 ./cbuild.py --force --no-color ${Bargs} pkg ${pkg}) > ${LOGf}"
 
-  # create a temp apkroot
+  # create a temp apkroot (to scan generated packages)
   apkroot="$(mktemp -d /tmp/apkroot.XXXXXXXX)"
   apkroot_create ${apkroot}
 
@@ -157,33 +160,33 @@ for pkg in $PKGlist; do
     exit 1
   fi
 
-  # loop on subpackages, possibly with different repos
+  # loop on subpackages, possibly with different repos and arch
   # XXX detect skipped (invalid) list item
   echo "${pkgraw}" | awk '{print $3,$6}' | sed -e 's,\.\.\.$,,'  \
   | while read rawspkg rawrepo; do
-    # strip arch
-    repo="$(dirname $rawrepo)"
+    spkg_arch="$(basename $rawrepo)"
+    spkg_repo="$(dirname $rawrepo)"
     # strip package extension, revision and version
-    subpkg=${rawspkg%.apk}
-    subpkg=${subpkg%-r*}
-    subpkg=${subpkg%-*}
+    spkg_name=${rawspkg%.apk}
+    spkg_name=${spkg_name%-r*}
+    spkg_name=${spkg_name%-*}
 
-    if [ ! -d "${repo}" ]; then
-      echo "[ERROR] subpkg $subpkg: non existent path repo=$repo"
+    if [ ! -d "${spkg_repo}" ]; then
+      echo "[ERROR] subpkg $spkg_name: non existent path spkg_repo=$spkg_repo"
       continue
     fi
 
-    subpkgLOG="${LOGdir}/${subpkg}.apk.info"
+    spkg_log="${LOGdir}/${spkg_name}.${spkg_arch}.apk.info"
 
-    echo "# [$pkg] dump subpkg $subpkg info into ${subpkgLOG}"
+    echo "# [$pkg] dump subpkg $spkg_name info into ${spkg_log}"
 
-    echo "# apk metadata info" >> ${subpkgLOG}
-    apkopt="--root ${apkroot} --arch ${tarch} --allow-untrusted --repository ${repo}"
-    exec_or_dry "apk ${apkopt} info -a ${subpkg} >> ${subpkgLOG}"
+    echo "# apk metadata info" >> ${spkg_log}
+    apkopt="--root ${apkroot} --arch ${spkg_arch} --allow-untrusted --repository ${spkg_repo}"
+    exec_or_dry "apk ${apkopt} info -a ${spkg_name} >> ${spkg_log}"
 
     # apk lists files only for installed packages, so let's use tar
-    echo "# package listing" >> ${subpkgLOG}
-    exec_or_dry "2> /dev/null tar tzvf ${rawrepo}/${rawspkg} >> ${subpkgLOG}"
+    echo "# package listing" >> ${spkg_log}
+    exec_or_dry "2> /dev/null tar tzvf ${rawrepo}/${rawspkg} >> ${spkg_log}"
   done
   rm -rf ${apkroot}
 done
