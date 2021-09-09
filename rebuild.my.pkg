@@ -32,7 +32,10 @@ dpkglist+=" contrib/uthash contrib/librsync contrib/musl-legacy-compat"
 dpkglist+=" contrib/burp"
 dpkglist+=" contrib/libuv contrib/msgpack contrib/neovim"
 dpkglist+=" contrib/libmd contrib/libbsd contrib/db contrib/nvi2"
-dpkglist+=" contrib/zsh"
+# rebuild.scratch will catch each generated pkg, but only one build.log ...
+dpkglist+=" contrib/curl"
+dpkglist+=" contrib/dinit"
+
 # deprecated packages
 #dpkglist+=" contrib/db18"
 #dpkglist+=" contrib/db1"
@@ -55,6 +58,10 @@ Usage: $0 [-n] [-h] [pkg1 [pkg2 ] ... ]
 
     * build main/foo package for all supported architectures:
       $0 main/foo
+
+    * build all new or modified packages on current git branch (since master):
+      git log --oneline --name-status master.. | grep /template.py | awk '{print $2}' \\
+          | tac | uniq | xargs -n 1 dirname | xargs $0
 
 EOFusage
 }

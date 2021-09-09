@@ -21,7 +21,7 @@ various tools around chimera-linux cports
 
 * dump package information into logfile `log/<date>.<category>.<pkgname>.<arch>/<gen-package>.apk.info`  
   include all apk metadata and file list content.  
-  There is a file for each built or generated package.
+  There is a file for each built package (requested or needed).
 
 * (todo) order packaging build according to their required dependency
 
@@ -45,5 +45,29 @@ Detailed usage : `$ ./build.scratch -h`
 ## rebuild.my.pkg
 
 A loop to build a (hardcoded) list of packages for all target architecures.  
-Use `build.scratch` for each build and display a summary of builds.
+Use `build.scratch` to perform each build and display a summary of builds.
 
+### Example: build all packages of current git branch
+
+Build all packages added or modified since master branch, for every available architectures:
+```
+$ git log --oneline --name-status master.. | grep /template.py | awk '{print $2}' \
+      | tac | uniq | xargs -n 1 dirname | xargs ../tools-yopito.git/rebuild.my.pkg
+...
+FAIL  arch=x86_64   pkg  contrib/neovim
+FAIL  arch=aarch64  pkg  contrib/neovim
+FAIL  arch=ppc64    pkg  contrib/neovim
+FAIL  arch=ppc64le  pkg  contrib/neovim
+FAIL  arch=riscv64  pkg  contrib/neovim
+OK    arch=x86_64   pkg  contrib/gtest
+OK    arch=aarch64  pkg  contrib/gtest
+OK    arch=ppc64    pkg  contrib/gtest
+OK    arch=ppc64le  pkg  contrib/gtest
+OK    arch=riscv64  pkg  contrib/gtest
+OK    arch=x86_64   pkg  contrib/dinit
+FAIL  arch=aarch64  pkg  contrib/dinit
+FAIL  arch=ppc64    pkg  contrib/dinit
+FAIL  arch=ppc64le  pkg  contrib/dinit
+FAIL  arch=riscv64  pkg  contrib/dinit
+...
+```
