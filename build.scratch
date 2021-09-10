@@ -3,6 +3,7 @@
 # purpose: build chimera package(s) using a fresh build env for each of them.
 #          store in log files: build output, generated packages data.
 #
+# XXX git retrieval of package is out of order
 # XXX if failure on (main) package build, don't exit too early: have to check
 #     if some subpackage have not been built.
 # XXX missing cbuild options in folder name

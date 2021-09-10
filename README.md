@@ -51,8 +51,9 @@ Use `build.scratch` to perform each build and display a summary of builds.
 
 Build all packages added or modified since master branch, for every available architectures:
 ```
-$ git log --oneline --name-status master.. | grep /template.py | awk '{print $2}' \
-      | tac | uniq | xargs -n 1 dirname | xargs ../tools-yopito.git/rebuild.my.pkg
+$ git log --oneline --name-status master.. \
+      | grep -F /template.py | grep "^[AM]" | awk '{print $2}' \
+      | tac | xargs -n 1 dirname | xargs ../tools-yopito.git/rebuild.my.pkg
 ...
 FAIL  arch=x86_64   pkg  contrib/neovim
 FAIL  arch=aarch64  pkg  contrib/neovim
