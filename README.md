@@ -4,8 +4,8 @@ various tools for chimera-linux cports
 
 *Contents*
 
-* [build.scratch](#build.scratch)
-* [rebuild.my.pkg](#rebuild.my.pkg)
+* [build.scratch](#build.scratch) : keep log and packaging info of `cbuild.py`
+* [rebuild.my.pkg](#rebuild.my.pkg) : loop with packages and all target architecture on top of `build.scratch`
 
 <a id="build.scratch"></a>
 ## build.scratch
