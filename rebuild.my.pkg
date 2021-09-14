@@ -1,0 +1,131 @@
+#!/bin/bash
+#
+# (todo) git example: package is built several times if several commits on its template.py file
+#        (uniq within pipes does not work well)
+# (todo) git example: handle renamed files too
+# (todo) switch from hardcoded list to git retrieval list of packages
+# (todo) disable check ?
+# (todo) handle cbuild.py params
+# (todo) use a temporary masterdir ?
+# (todo) use a temporary hostdir ?
+# (todo) command-line option to restrict to a given tarch
+# (todo) command-line option to skip build on native arch
+# (todo) command-line option to enable testing (native arch)
+#
+# 2021-08-28 support package list from command line.
+#            Internal package list become the default one (if no list provided)
+# 2021-08-25 pkg list: +dialog, +zsh, comment DEPRECATED pkg
+# 2021-08-20 db 1.85 and nvi2 are fine
+# 2021-08-16 reuse ./build.scratch
+# 2021-08-16 target unified, native arch first
+
+# known status
+kb="""
+  - neovim   FAIL build broken (wip)
+  - db       XXX crossbuild status unknown
+"""
+
+# default list of package to build
+dpkglist=
+# ccache is known to build everywhere
+dpkglist+=" main/ccache"
+dpkglist+=" contrib/dialog"
+dpkglist+=" contrib/zsh"
+dpkglist+=" contrib/strace"
+dpkglist+=" contrib/db5 contrib/nvi"
+dpkglist+=" contrib/m4 contrib/autoconf contrib/automake"
+dpkglist+=" contrib/uthash contrib/librsync contrib/musl-legacy-compat"
+dpkglist+=" contrib/burp"
+dpkglist+=" contrib/libuv contrib/msgpack contrib/neovim"
+dpkglist+=" contrib/libmd contrib/libbsd contrib/db contrib/nvi2"
+# rebuild.scratch will catch each generated pkg, but only one build.log ...
+dpkglist+=" contrib/curl"
+dpkglist+=" contrib/dinit"
+
+# deprecated packages
+#dpkglist+=" contrib/db18"
+#dpkglist+=" contrib/db1"
+
+usage() {
+cat << EOFusage
+
+Usage: $0 [-n] [-h] [pkg1 [pkg2 ] ... ]
+
+  #-n            dry run
+  -h            this help
+  pkg1 pkg2 ... list of package(s) to build. If not, use hardcoded list.
+
+  Each package is built in a fresh masterdir for each available architecture,
+  by using build.scratch script.
+  
+  A summary of builds is printed.
+
+  Examples:
+
+    * build main/foo package for all supported architectures:
+      $0 main/foo
+
+    * build all new or modified packages on current git branch (since master):
+      git log --oneline --name-status master.. \\
+          | grep -F /template.py | grep "^[AM]" | awk '{print \$2}' \\
+          | tac | xargs -n 1 dirname | xargs $0
+
+EOFusage
+}
+
+summary=
+
+# list of package to build
+pkglist=
+
+# native arch
+narch=$(uname -m)
+
+# all target arch with native first
+# (for instance: x86_64 ppc64 aarch64 riscv64 ppc64le)
+tarch=
+tarch="$(ls cbuild/build_profiles/*.ini | xargs -I% -n 1 basename % .ini | grep -vw bootstrap | grep -vw ${narch})"
+tarch="${narch} ${tarch}"
+
+# handle command line arguments
+for arg; do
+  case $arg in
+    -h|--help) usage && exit 0 ;;
+    *)         pkglist="${pkglist} $arg"
+  esac
+done
+
+[ "$pkglist" = "" ] && pkglist="$dpkglist"
+echo "# list of package to build:"
+echo $pkglist
+
+if [ ! -x "./build.scratch" ]
+then
+  echo "[ERROR] ./build.scratch is required"
+  exit 1
+fi
+ 
+# loop on each package, native arch first
+for pkg in ${pkglist}
+do
+    for arch in ${tarch}
+    do
+        st=FAIL
+        echo "# arch=${arch} build ${pkg} ..."
+        ./build.scratch "-a ${arch}" ${pkg}
+        [ $? -eq 0 ] && st="OK  "
+        item="${st} arch=${arch} pkg ${pkg}"
+        echo "# ${item}"
+        summary+="${item}\n"
+        echo "# Summary:"
+        echo -e "${summary}" | column -t
+    done
+done
+
+if [ "$pkglist" = "$dpkglist" ]; then
+  echo
+  echo "---------------------------------------------"
+  echo "known status:"
+  echo -e "${kb}" | column -t
+  echo "---------------------------------------------"
+fi

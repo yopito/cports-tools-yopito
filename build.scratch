@@ -1,0 +1,195 @@
+#! /bin/bash
+#
+# purpose: build chimera package(s) using a fresh build env for each of them.
+#          store in log files: build output, generated packages data.
+#
+# (todo) git retrieval of package is out of order
+# (todo) if failure on (main) package build, don't exit too early:
+#        have to check dump packages that may have been built before failure.
+# (todo) missing cbuild options in folder's name
+# (todo) package content: don't show timestamp in tar listing
+# (todo) apkroot_create(): use exec_or_dry(), control return code
+# (todo) exec_or_dry(): add silent mode
+# (todo) cbuild.py stdout/stderr is captured out of order
+# (todo) cbuild.py does not expose (yet) any of its parameters: have to parse
+#        build output, can't compute order of package to build.
+# (todo) use a temporary masterdir ?
+# (todo) order packages to build by their dependency
+# (todo) option to build for several arch at once
+#
+# 20210902 generated subpkg info: handle arch of generated package (fix)
+# 20210829 info file for each build or generated (sub)packages
+# 20210814 initial revision
+
+usage() {
+cat << EOFusage
+
+Usage: $0 [-n] [-h] [cbuild_flags] [pkg1 [pkg2 ] ... ]
+
+  -n            dry run
+  -h            this help
+  cbuild_flags  QUOTE THEM if any (like '-a <arch> -m <dir> ...')
+  pkg1 pkg2 ... list of package(s) to build or retrieved from git
+
+  Each package is built one by one in a fresh masterdir,
+  #not yet# ordered by their dependency order.
+  If no package are requested, retrieve the list of them from git against the
+  master branch.
+  Build output and package(s) infos are stored in timestamped log files.
+
+  Examples:
+
+    * build main/foo package for native arch:
+      $0 main/foo
+
+    * crossbuild main/foo package for riscv64 target arch:
+      $0 '-a riscv64' main/foo
+
+    * crossbuild all package in current git branch for aarch64:
+      $0 '-a aarch64'
+
+    * check output of build log(s) in the meantime:
+      $ watch -n 5 "ls -1tr log/*/*.log | tail -n 3 | xargs du -sk && echo && ls -1tr log/*/*.log | tail -n 1 | xargs tail"
+EOFusage
+}
+
+exec_or_dry() {
+  # $1: command to execute
+  # $2: do not exit if set and command returns != 0
+  if [ "$DRY" = 1 ]; then
+    echo "# dry cmd: $1"
+    return 0
+  fi
+  echo "# cmd: $1"
+  eval "$1"
+  if [ $? -ne 0 ]; then
+    echo "# cmd FAILED"
+    if  [ -z "$2" ]; then
+      echo "# exiting requested: stop here"
+      exit 1
+    fi
+  fi
+}
+
+apkroot_create() {
+  if [ "$1" = "" ]; then
+    echo "[ERROR] usage: apkroot_create /path/to/create"
+    return 1
+  fi
+  mkdir -p "${1}/etc/apk"
+  mkdir -p "${1}/usr/lib/apk/db"
+  mkdir -p "${1}/var/cache/apk"
+  touch "${1}/usr/lib/apk/db/installed"
+  touch "${1}/etc/apk/world"
+}
+
+## start
+DRY=
+PKGlist=
+Bargs=
+ts="$(date '+%Y-%m-%d_%H%M%S')"
+
+exec_or_dry "test -x ./cbuild.py"
+
+[ ! -d "log" ] && ( echo "creating log/ ..." ; mkdir log )
+
+# handle command line arguments
+for arg; do
+  case $arg in
+    -n)        DRY=1 ;;
+    -h|--help) usage && exit 0 ;;
+    -*)        Bargs="$Bargs $arg" ;;
+    *)         PKGlist="$PKGlist $arg"
+  esac
+done
+
+# lstrip space
+Bargs="${Bargs# }"
+
+echo
+echo "# input cbuild args: $Bargs"
+
+# retrieve target arch
+tarch="${Bargs#*-a }"
+tarch="${tarch#*--arch }"
+if [ "$tarch" = "${Bargs}" ]; then
+  tarch="$(uname -m)"
+else
+  tarch="${tarch%% *}"
+fi
+
+echo "# package(s) requested to build: $PKGlist"
+if [ "$PKGlist" = "" ]
+then
+  echo "# no package requested: retrieve list against git master branch ..."
+  PKGlist=$(git diff master --name-only --diff-filter=AM |
+            grep -F "/template.py" |
+            xargs -n 1 dirname |
+            tr '\n' ' '
+           )
+fi
+echo "# package(s) to build: $PKGlist"
+echo "# XXX packages are not ordered by their build depedency yet"
+
+# loop on each package to build
+for pkg in $PKGlist; do
+  echo
+  exec_or_dry "test -f ${pkg}/template.py"
+
+  # pkgname in the form <dir>/<pkg>
+  LOGdir="log/${ts}.${pkg/\//.}.${tarch}"
+  LOGf="${LOGdir}/build.log"
+
+  echo "# [$pkg] create a fresh masterdir ..."
+  exec_or_dry "./cbuild.py zap"
+  exec_or_dry "./cbuild.py binary-bootstrap > /dev/null"
+
+  echo "# [$pkg] build logfile: $LOGf"
+  exec_or_dry "mkdir -p $(dirname $(realpath -m $LOGf))"
+  exec_or_dry "(2>&1 ./cbuild.py --force --no-color ${Bargs} pkg ${pkg}) > ${LOGf}"
+
+  # create a temp apkroot (to scan content of generated packages)
+  apkroot="$(mktemp -d /tmp/apkroot.XXXXXXXX)"
+  apkroot_create ${apkroot}
+
+  # retrieve generated package(s) and their repo.
+  # From build log since cbuild does not provide this info.
+  # However, this will catch any other package that had to be rebuild
+  pkgraw="$( grep -E '^=> Creating .+ in repository .+' ${LOGf})"
+  if [ "${pkgraw}" = "" ]; then
+    echo "[ERROR] found no generated packge in ${LOGf}"
+    rm -rf ${apkroot}
+    exit 1
+  fi
+
+  # loop on subpackages, possibly with different repos and arch
+  # XXX detect skipped (invalid) list item
+  echo "${pkgraw}" | awk '{print $3,$6}' | sed -e 's,\.\.\.$,,'  \
+  | while read rawspkg rawrepo; do
+    spkg_arch="$(basename $rawrepo)"
+    spkg_repo="$(dirname $rawrepo)"
+    # strip package extension, revision and version
+    spkg_name=${rawspkg%.apk}
+    spkg_name=${spkg_name%-r*}
+    spkg_name=${spkg_name%-*}
+
+    if [ ! -d "${spkg_repo}" ]; then
+      echo "[ERROR] subpkg $spkg_name: non existent path spkg_repo=$spkg_repo"
+      continue
+    fi
+
+    spkg_log="${LOGdir}/${spkg_name}.${spkg_arch}.apk.info"
+
+    echo "# [$pkg] dump subpkg $spkg_name info into ${spkg_log}"
+
+    echo "# apk metadata info" >> ${spkg_log}
+    apkopt="--root ${apkroot} --arch ${spkg_arch} --allow-untrusted --repository ${spkg_repo}"
+    exec_or_dry "apk ${apkopt} info -a ${spkg_name} >> ${spkg_log}"
+
+    # apk lists files only for installed packages, so let's use tar
+    echo "# package listing" >> ${spkg_log}
+    exec_or_dry "2> /dev/null tar tzvf ${rawrepo}/${rawspkg} >> ${spkg_log}"
+  done
+  rm -rf ${apkroot}
+done
+echo "# That's all folks !"
