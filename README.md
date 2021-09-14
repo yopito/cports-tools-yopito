@@ -10,7 +10,7 @@ various tools for chimera-linux cports
 <a id="build.scratch"></a>
 ## build.scratch
 
-`build.scratch` is a wrapper on top on `cbuild.py` to ease to-day-to packaging: 
+`build.scratch` is a wrapper on top on `cbuild.py` to ease day-to-day packaging: 
 
 * build each package from a *fresh* `masterdir`.  
   This helps on tracking dependencies, since build environment is not polluted
