@@ -3,18 +3,19 @@
 # purpose: build chimera package(s) using a fresh build env for each of them.
 #          store in log files: build output, generated packages data.
 #
-# XXX git retrieval of package is out of order
-# XXX if failure on (main) package build, don't exit too early: have to check
-#     if some subpackage have not been built.
-# XXX missing cbuild options in folder name
-# XXX apkroot_create(): use exec_or_dry(), control return code
-# XXX exec_or_dry(): add silent mode
-# XXX cbuild.py stdout/stderr is captured out of order
-# XXX cbuild.py does not expose (yet) any of its parameters: have to parse
-#     build output, can't compute order of package to build.
-# XXX use a temporary masterdir ?
-# XXX order packages to build by their dependency
-# XXX option to build for several arch at once
+# (todo) git retrieval of package is out of order
+# (todo) if failure on (main) package build, don't exit too early:
+#        have to check dump packages that may have been built before failure.
+# (todo) missing cbuild options in folder's name
+# (todo) package content: don't show timestamp in tar listing
+# (todo) apkroot_create(): use exec_or_dry(), control return code
+# (todo) exec_or_dry(): add silent mode
+# (todo) cbuild.py stdout/stderr is captured out of order
+# (todo) cbuild.py does not expose (yet) any of its parameters: have to parse
+#        build output, can't compute order of package to build.
+# (todo) use a temporary masterdir ?
+# (todo) order packages to build by their dependency
+# (todo) option to build for several arch at once
 #
 # 20210902 generated subpkg info: handle arch of generated package (fix)
 # 20210829 info file for each build or generated (sub)packages
@@ -147,7 +148,7 @@ for pkg in $PKGlist; do
   exec_or_dry "mkdir -p $(dirname $(realpath -m $LOGf))"
   exec_or_dry "(2>&1 ./cbuild.py --force --no-color ${Bargs} pkg ${pkg}) > ${LOGf}"
 
-  # create a temp apkroot (to scan generated packages)
+  # create a temp apkroot (to scan content of generated packages)
   apkroot="$(mktemp -d /tmp/apkroot.XXXXXXXX)"
   apkroot_create ${apkroot}
 

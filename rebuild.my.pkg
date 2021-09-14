@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# (todo) git example: package is built several times if many commits on its template.py file
+# (todo) git example: package is built several times if several commits on its template.py file
 #        (uniq within pipes does not work well)
 # (todo) git example: handle renamed files too
 # (todo) switch from hardcoded list to git retrieval list of packages
@@ -122,7 +122,7 @@ do
     done
 done
 
-if [ "$pkglist" = "$dpkstlist" ]; then
+if [ "$pkglist" = "$dpkglist" ]; then
   echo
   echo "---------------------------------------------"
   echo "known status:"
