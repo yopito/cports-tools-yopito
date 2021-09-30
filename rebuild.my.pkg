@@ -84,7 +84,7 @@ narch=$(uname -m)
 # all target arch with native first
 # (for instance: x86_64 ppc64 aarch64 riscv64 ppc64le)
 tarch=
-tarch="$(ls cbuild/build_profiles/*.ini | xargs -I% -n 1 basename % .ini | grep -vw bootstrap | grep -vw ${narch})"
+tarch="$(ls etc/build_profiles/*.ini | xargs -I% -n 1 basename % .ini | grep -vw bootstrap | grep -vw ${narch})"
 tarch="${narch} ${tarch}"
 
 # handle command line arguments
