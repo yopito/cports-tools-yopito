@@ -5,7 +5,7 @@
 # (todo) git example: handle renamed files too
 # (todo) switch from hardcoded list to git retrieval list of packages
 # (todo) disable check ?
-# (todo) handle cbuild.py params
+# (todo) handle cbuild params
 # (todo) use a temporary masterdir ?
 # (todo) use a temporary hostdir ?
 # (todo) command-line option to restrict to a given tarch
@@ -68,7 +68,7 @@ Usage: $0 [-n] [-h] [pkg1 [pkg2 ] ... ]
     * build all new or modified packages on current git branch (since master):
       git log --oneline --name-status master.. \\
           | grep -F /template.py | grep "^[AM]" | awk '{print \$2}' \\
-          | tac | xargs -n 1 dirname | xargs $0
+          | tac | xargs -r -n 1 dirname | xargs $0
 
 EOFusage
 }
