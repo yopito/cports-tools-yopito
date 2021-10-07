@@ -3,15 +3,16 @@
 # purpose: build chimera package(s) using a fresh build env for each of them.
 #          store in log files: build output, generated packages data.
 #
-# (todo) git retrieval of package is out of order
+# (todo) package list from git: package list several time if several commits on its template.py file
+# (todo) package list from git: handle renamed files too
 # (todo) if failure on (main) package build, don't exit too early:
 #        have to check dump packages that may have been built before failure.
 # (todo) missing cbuild options in folder's name
-# (todo) package content: don't show timestamp in tar listing
+# (todo) package content: show only size and filename
 # (todo) apkroot_create(): use exec_or_dry(), control return code
 # (todo) exec_or_dry(): add silent mode
-# (todo) cbuild.py stdout/stderr is captured out of order
-# (todo) cbuild.py does not expose (yet) any of its parameters: have to parse
+# (todo) cbuild stdout/stderr is captured out of order
+# (todo) cbuild does not expose (yet) any of its parameters: have to parse
 #        build output, can't compute order of package to build.
 # (todo) use a temporary masterdir ?
 # (todo) order packages to build by their dependency
@@ -36,6 +37,7 @@ Usage: $0 [-n] [-h] [cbuild_flags] [pkg1 [pkg2 ] ... ]
   If no package are requested, retrieve the list of them from git against the
   master branch.
   Build output and package(s) infos are stored in timestamped log files.
+  Stop on the first error (if several packages requested)
 
   Examples:
 
@@ -89,7 +91,7 @@ PKGlist=
 Bargs=
 ts="$(date '+%Y-%m-%d_%H%M%S')"
 
-exec_or_dry "test -x ./cbuild.py"
+exec_or_dry "test -x ./cbuild"
 
 [ ! -d "log" ] && ( echo "creating log/ ..." ; mkdir log )
 
@@ -121,11 +123,10 @@ fi
 echo "# package(s) requested to build: $PKGlist"
 if [ "$PKGlist" = "" ]
 then
-  echo "# no package requested: retrieve list against git master branch ..."
-  PKGlist=$(git diff master --name-only --diff-filter=AM |
-            grep -F "/template.py" |
-            xargs -n 1 dirname |
-            tr '\n' ' '
+  echo "# no package requested: retrieve ordered list against git master branch ..."
+  PKGlist=$(git log --oneline --name-status master.. |
+            grep -F /template.py | grep "^[AM]" | awk '{print $2}' |
+            tac | xargs -r -n 1 dirname | tr '\n' ' '
            )
 fi
 echo "# package(s) to build: $PKGlist"
@@ -141,12 +142,12 @@ for pkg in $PKGlist; do
   LOGf="${LOGdir}/build.log"
 
   echo "# [$pkg] create a fresh masterdir ..."
-  exec_or_dry "./cbuild.py zap"
-  exec_or_dry "./cbuild.py binary-bootstrap > /dev/null"
+  exec_or_dry "./cbuild zap"
+  exec_or_dry "./cbuild binary-bootstrap > /dev/null"
 
   echo "# [$pkg] build logfile: $LOGf"
   exec_or_dry "mkdir -p $(dirname $(realpath -m $LOGf))"
-  exec_or_dry "(2>&1 ./cbuild.py --force --no-color ${Bargs} pkg ${pkg}) > ${LOGf}"
+  exec_or_dry "(2>&1 ./cbuild --force --no-color ${Bargs} pkg ${pkg}) > ${LOGf}"
 
   # create a temp apkroot (to scan content of generated packages)
   apkroot="$(mktemp -d /tmp/apkroot.XXXXXXXX)"
