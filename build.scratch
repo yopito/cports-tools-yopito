@@ -8,7 +8,6 @@
 # (todo) if failure on (main) package build, don't exit too early:
 #        have to check dump packages that may have been built before failure.
 # (todo) missing cbuild options in folder's name
-# (todo) package content: show only size and filename
 # (todo) apkroot_create(): use exec_or_dry(), control return code
 # (todo) exec_or_dry(): add silent mode
 # (todo) cbuild does not expose (yet) any of its parameters: have to parse
@@ -186,9 +185,10 @@ for pkg in $PKGlist; do
     apkopt="--root ${apkroot} --arch ${spkg_arch} --allow-untrusted --repository ${spkg_repo}"
     exec_or_dry "apk ${apkopt} info -a ${spkg_name} >> ${spkg_log}"
 
-    # apk lists files only for installed packages, so let's use tar
+    # apk lists files only of installed packages, so let's use tar
+    # tar output: file timestamp is not relevant
     echo "# package listing" >> ${spkg_log}
-    exec_or_dry "2> /dev/null tar tzvf ${rawrepo}/${rawspkg} >> ${spkg_log}"
+    exec_or_dry "2> /dev/null tar tzvf ${rawrepo}/${rawspkg} | column -t -H 4,5 -R 3 >> ${spkg_log}"
   done
   rm -rf ${apkroot}
 done
