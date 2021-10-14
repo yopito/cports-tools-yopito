@@ -11,7 +11,6 @@
 # (todo) package content: show only size and filename
 # (todo) apkroot_create(): use exec_or_dry(), control return code
 # (todo) exec_or_dry(): add silent mode
-# (todo) cbuild stdout/stderr is captured out of order
 # (todo) cbuild does not expose (yet) any of its parameters: have to parse
 #        build output, can't compute order of package to build.
 # (todo) use a temporary masterdir ?
@@ -147,7 +146,7 @@ for pkg in $PKGlist; do
 
   echo "# [$pkg] build logfile: $LOGf"
   exec_or_dry "mkdir -p $(dirname $(realpath -m $LOGf))"
-  exec_or_dry "(2>&1 ./cbuild --force --no-color ${Bargs} pkg ${pkg}) > ${LOGf}"
+  exec_or_dry "(2>&1 PYTHONUNBUFFERED=1 ./cbuild --force --no-color ${Bargs} pkg ${pkg}) > ${LOGf}"
 
   # create a temp apkroot (to scan content of generated packages)
   apkroot="$(mktemp -d /tmp/apkroot.XXXXXXXX)"
