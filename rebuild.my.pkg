@@ -1,5 +1,6 @@
 #!/bin/bash
 #
+# (todo) handle signal correctly (control-C left a lot of processes)
 # (todo) git example: package is built several times if several commits on its template.py file
 #        (uniq within pipes does not work well)
 # (todo) git example: handle renamed files too
@@ -9,9 +10,11 @@
 # (todo) use a temporary masterdir ?
 # (todo) use a temporary hostdir ?
 # (todo) command-line option to restrict to a given tarch
-# (todo) command-line option to skip build on native arch
 # (todo) command-line option to enable testing (native arch)
 #
+# 2021-10-21 -s option to skip native arch
+# 2021-10-21 -a option to request all supported target architectures
+# 2021-10-21 default is now: only native arch
 # 2021-08-28 support package list from command line.
 #            Internal package list become the default one (if no list provided)
 # 2021-08-25 pkg list: +dialog, +zsh, comment DEPRECATED pkg
@@ -53,6 +56,8 @@ Usage: $0 [-n] [-h] [pkg1 [pkg2 ] ... ]
 
   #-n            dry run
   -h            this help
+  -a            all available target arch(s)
+  -s            skip native arch
   pkg1 pkg2 ... list of package(s) to build. If not, use hardcoded list.
 
   Each package is built in a fresh masterdir for each available architecture,
@@ -63,12 +68,15 @@ Usage: $0 [-n] [-h] [pkg1 [pkg2 ] ... ]
   Examples:
 
     * build main/foo package for all supported architectures:
-      $0 main/foo
 
-    * build all new or modified packages on current git branch (since master):
+      $0 -a main/foo
+
+    * build each new or modified packages on current git branch (since master)
+      for all target arch except native arch:
+
       git log --oneline --name-status master.. \\
           | grep -F /template.py | grep "^[AM]" | awk '{print \$2}' \\
-          | tac | xargs -r -n 1 dirname | xargs $0
+          | tac | xargs -r -n 1 dirname | xargs $0 -a -s
 
 EOFusage
 }
@@ -78,26 +86,38 @@ summary=
 # list of package to build
 pkglist=
 
-# native arch
-narch=$(uname -m)
-
-# all target arch with native first
-# (for instance: x86_64 ppc64 aarch64 riscv64 ppc64le)
-tarch=
-tarch="$(ls etc/build_profiles/*.ini | xargs -I% -n 1 basename % .ini | grep -vw bootstrap | grep -vw ${narch})"
-tarch="${narch} ${tarch}"
+# only native as target arch
+tarch_all=0
+narch_only=1
 
 # handle command line arguments
 for arg; do
   case $arg in
     -h|--help) usage && exit 0 ;;
+    -a)        tarch_all=1 ;;
+    -s)        narch_only=0 ;;
+    -*)        echo "[ERROR] invalid arg" && exit 1;;
     *)         pkglist="${pkglist} $arg"
   esac
 done
 
+# all target arch with native first
+# (for instance: x86_64 ppc64 aarch64 riscv64 ppc64le)
+arch_list=
+narch=$(uname -m)
+
+if [ ${tarch_all} -eq 1 ]; then
+  arch_list="$(ls etc/build_profiles/*.ini | xargs -I% -n 1 basename % .ini | grep -vw bootstrap | grep -vw ${narch})"
+fi
+if [ ${narch_only} -eq 1 ]; then
+  arch_list="${narch} ${arch_list}"
+fi
+
 [ "$pkglist" = "" ] && pkglist="$dpkglist"
 echo "# list of package to build:"
 echo $pkglist
+
+echo -e "# target architectures to consider: ${arch_list}"
 
 if [ ! -x "./build.scratch" ]
 then
@@ -108,7 +128,7 @@ fi
 # loop on each package, native arch first
 for pkg in ${pkglist}
 do
-    for arch in ${tarch}
+    for arch in ${arch_list}
     do
         st=FAIL
         echo "# arch=${arch} build ${pkg} ..."

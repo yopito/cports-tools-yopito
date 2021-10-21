@@ -76,11 +76,12 @@ Uses `build.scratch` to perform each build (generating log and info files) and d
 
 ### Example: build all packages of current git branch
 
-Build all packages added or modified since master branch, for every available architectures:
+Build all packages added or modified on current git branch since master branch,
+for every available architectures (native or via crossbuild):
 ```
 $ git log --oneline --name-status master.. \
       | grep -F /template.py | grep "^[AM]" | awk '{print $2}' \
-      | tac | xargs -n 1 dirname | xargs ../tools-yopito.git/rebuild.my.pkg
+      | tac | xargs -n 1 dirname | xargs ../tools-yopito.git/rebuild.my.pkg -a
 ...
 (calls to build.scratch for each packages cross each target arch)
 ...
