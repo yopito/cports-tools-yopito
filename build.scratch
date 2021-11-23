@@ -16,6 +16,7 @@
 # (todo) order packages to build by their dependency
 # (todo) option to build for several arch at once
 #
+# 20211123 handle staging repo
 # 20210902 generated subpkg info: handle arch of generated package (fix)
 # 20210829 info file for each build or generated (sub)packages
 # 20210814 initial revision
@@ -167,14 +168,21 @@ for pkg in $PKGlist; do
   | while read rawspkg rawrepo; do
     spkg_arch="$(basename $rawrepo)"
     spkg_repo="$(dirname $rawrepo)"
+    spkg_repo_nostage="${spkg_repo%/.stage}"
     # strip package extension, revision and version
     spkg_name=${rawspkg%.apk}
     spkg_name=${spkg_name%-r*}
     spkg_name=${spkg_name%-*}
 
-    if [ ! -d "${spkg_repo}" ]; then
-      echo "[ERROR] subpkg $spkg_name: non existent path spkg_repo=$spkg_repo"
-      continue
+    # unstage: package file has been produced but does not exist (anymore) in
+    # staging repo: so has been moved into main repo
+    if [ ! -f "${rawrepo}/${rawspkg}" ]; then
+      if [ -f "${spkg_repo_nostage}/${spkg_arch}/${rawspkg}" ]; then
+        spkg_repo="${spkg_repo_nostage}"
+      else
+        echo "[ERROR] package file not found (staged or unstaged): ${rawrepo}/${rawspkg}"
+        continue
+      fi
     fi
 
     spkg_log="${LOGdir}/${spkg_name}.${spkg_arch}.apk.info"
