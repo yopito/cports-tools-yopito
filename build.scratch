@@ -3,6 +3,8 @@
 # purpose: build chimera package(s) using a fresh build env for each of them.
 #          store in log files: build output, generated packages data.
 #
+# (todo) apk3: can't list package file content (not tar format anymore)
+# (todo) on fails build, some (required) package(s) may have been produced.
 # (todo) package list from git: package list several time if several commits on its template.py file
 # (todo) package list from git: handle renamed files too
 # (todo) if failure on (main) package build, don't exit too early:
@@ -16,6 +18,7 @@
 # (todo) order packages to build by their dependency
 # (todo) option to build for several arch at once
 #
+# 20220315 cleanup apk root generation for apk3 (git)
 # 20211123 handle staging repo
 # 20210902 generated subpkg info: handle arch of generated package (fix)
 # 20210829 info file for each build or generated (sub)packages
@@ -78,10 +81,12 @@ apkroot_create() {
     return 1
   fi
   mkdir -p "${1}/etc/apk"
-  mkdir -p "${1}/usr/lib/apk/db"
-  mkdir -p "${1}/var/cache/apk"
-  touch "${1}/usr/lib/apk/db/installed"
+  mkdir -p "${1}/lib/apk/db"
   touch "${1}/etc/apk/world"
+  touch "${1}/lib/apk/db/installed"
+  # need this if apk built with /usr/lib instead of /lib
+  #mkdir -p "{1}/usr"
+  #ln -s "${1}/lib" "${1}/usr/lib"
 }
 
 ## start
@@ -154,7 +159,7 @@ for pkg in $PKGlist; do
 
   # retrieve generated package(s) and their repo.
   # From build log since cbuild does not provide this info.
-  # However, this will catch any other package that had to be rebuild
+  # However, this will catch any other package that had to be rebuilt
   pkgraw="$( grep -E '^=> Creating .+ in repository .+' ${LOGf})"
   if [ "${pkgraw}" = "" ]; then
     echo "[ERROR] found no generated packge in ${LOGf}"
@@ -195,8 +200,8 @@ for pkg in $PKGlist; do
 
     # apk lists files only of installed packages, so let's use tar
     # tar output: file timestamp is not relevant
-    echo "# package listing" >> ${spkg_log}
-    exec_or_dry "2> /dev/null tar tzvf ${spkg_repo}/${spkg_arch}/${rawspkg} | column -t -H 4,5 -R 3 >> ${spkg_log}"
+    echo "# package listing: not available for now (apk3)" >> ${spkg_log}
+    #apk2# exec_or_dry "2> /dev/null tar tzvf ${spkg_repo}/${spkg_arch}/${rawspkg} | column -t -H 4,5 -R 3 >> ${spkg_log}"
   done
   rm -rf ${apkroot}
 done
