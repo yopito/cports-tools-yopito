@@ -4,6 +4,7 @@
 #          store in log files: build output, generated packages data.
 #
 # (todo) apk3: can't list package file content (not tar format anymore)
+#        wait for https://gitlab.alpinelinux.org/alpine/apk-tools/-/issues/7103
 # (todo) on fails build, some (required) package(s) may have been produced.
 # (todo) package list from git: package list several time if several commits on its template.py file
 # (todo) package list from git: handle renamed files too
