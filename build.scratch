@@ -19,6 +19,7 @@
 # (todo) order packages to build by their dependency
 # (todo) option to build for several arch at once
 #
+# 20220507 add cbuild dump on top of build.log
 # 20220315 cleanup apk root generation for apk3 (git)
 # 20211123 handle staging repo
 # 20210902 generated subpkg info: handle arch of generated package (fix)
@@ -152,7 +153,10 @@ for pkg in $PKGlist; do
 
   echo "# [$pkg] build logfile: $LOGf"
   exec_or_dry "mkdir -p $(dirname $(realpath -m $LOGf))"
-  exec_or_dry "(2>&1 PYTHONUNBUFFERED=1 ./cbuild --force --no-color ${Bargs} pkg ${pkg}) > ${LOGf}"
+  exec_or_dry "echo '## cbuild dump ${pkg}' > ${LOGf}"
+  exec_or_dry "(2>&1 ./cbuild --no-color ${Bargs} dump ${pkg}) >> ${LOGf}"
+  exec_or_dry "echo '## cbuild pkg ${pkg}' >> ${LOGf}"
+  exec_or_dry "(2>&1 PYTHONUNBUFFERED=1 ./cbuild --force --no-color ${Bargs} pkg ${pkg}) >> ${LOGf}"
 
   # create a temp apkroot (to scan content of generated packages)
   apkroot="$(mktemp -d /tmp/apkroot.XXXXXXXX)"
