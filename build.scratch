@@ -5,6 +5,7 @@
 #
 # (todo) apk3: can't list package file content (not tar format anymore)
 #        wait for https://gitlab.alpinelinux.org/alpine/apk-tools/-/issues/7103
+#        update: add small listing only for native archive (via ./cbuild chroot)
 # (todo) on fails build, some (required) package(s) may have been produced.
 # (todo) package list from git: package list several time if several commits on its template.py file
 # (todo) package list from git: handle renamed files too
@@ -19,6 +20,7 @@
 # (todo) order packages to build by their dependency
 # (todo) option to build for several arch at once
 #
+# 20220806 dump package content (apk3: install it within chroot first)
 # 20220507 add cbuild dump on top of build.log
 # 20220315 cleanup apk root generation for apk3 (git)
 # 20211123 handle staging repo
@@ -203,10 +205,14 @@ for pkg in $PKGlist; do
     apkopt="--root ${apkroot} --arch ${spkg_arch} --allow-untrusted --repository ${spkg_repo}"
     exec_or_dry "apk ${apkopt} info -a ${spkg_name} >> ${spkg_log}"
 
+    echo "# package content:" >> ${spkg_log}
     # apk lists files only of installed packages, so let's use tar
     # tar output: file timestamp is not relevant
-    echo "# package listing: not available for now (apk3)" >> ${spkg_log}
+    # apk3: can't list package content with tar, so install and work on within chroot
+    #       - XXX only for native arch ?
+    #       - may fail on user creation but package is installed
     #apk2# exec_or_dry "2> /dev/null tar tzvf ${spkg_repo}/${spkg_arch}/${rawspkg} | column -t -H 4,5 -R 3 >> ${spkg_log}"
+    exec_or_dry "echo 'cd / ; apk add ${spkg_name} ;  apk info -L ${spkg_name} | grep -v contains: | sort | xargs ls -1trs' | ./cbuild chroot" >> ${spkg_log}
   done
   rm -rf ${apkroot}
 done
