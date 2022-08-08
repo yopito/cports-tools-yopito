@@ -212,7 +212,7 @@ for pkg in $PKGlist; do
     #       - XXX only for native arch ?
     #       - may fail on user creation but package is installed
     #apk2# exec_or_dry "2> /dev/null tar tzvf ${spkg_repo}/${spkg_arch}/${rawspkg} | column -t -H 4,5 -R 3 >> ${spkg_log}"
-    exec_or_dry "echo 'cd / ; apk add ${spkg_name} ;  apk info -L ${spkg_name} | grep -v contains: | sort | xargs ls -1trs' | ./cbuild chroot" >> ${spkg_log}
+    exec_or_dry "echo 'cd / ; apk add ${spkg_name} ;  apk info -L ${spkg_name} | grep -v contains: | sort | xargs ls -1trsk' | ./cbuild chroot" >> ${spkg_log}
   done
   rm -rf ${apkroot}
 done
