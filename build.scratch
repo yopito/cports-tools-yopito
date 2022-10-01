@@ -3,6 +3,7 @@
 # purpose: build chimera package(s) using a fresh build env for each of them.
 #          store in log files: build output, generated packages data.
 #
+# (todo) apk listing is wrong if listing for target arch: listing host arch
 # (todo) apk3: can't list package file content (not tar format anymore)
 #        wait for https://gitlab.alpinelinux.org/alpine/apk-tools/-/issues/7103
 #        update: add small listing only for native archive (via ./cbuild chroot)
@@ -134,7 +135,7 @@ then
   echo "# no package requested: retrieve ordered list against git master branch ..."
   PKGlist=$(git log --oneline --name-status master.. |
             grep -F /template.py | grep "^[AM]" | awk '{print $2}' |
-            tac | xargs -r -n 1 dirname | tr '\n' ' '
+            grep -v "^src/" | tac | xargs -r -n 1 dirname | tr '\n' ' '
            )
 fi
 echo "# package(s) to build: $PKGlist"
@@ -169,7 +170,7 @@ for pkg in $PKGlist; do
   # However, this will catch any other package that had to be rebuilt
   pkgraw="$( grep -E '^=> Creating .+ in repository .+' ${LOGf})"
   if [ "${pkgraw}" = "" ]; then
-    echo "[ERROR] found no generated packge in ${LOGf}"
+    echo "[ERROR] found 0 generated package in ${LOGf}"
     rm -rf ${apkroot}
     exit 1
   fi
