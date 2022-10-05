@@ -8,7 +8,6 @@
 #        wait for https://gitlab.alpinelinux.org/alpine/apk-tools/-/issues/7103
 #        update: add small listing only for native archive (via ./cbuild chroot)
 # (todo) on fails build, some (required) package(s) may have been produced.
-# (todo) package list from git: package list several time if several commits on its template.py file
 # (todo) package list from git: handle renamed files too
 # (todo) if failure on (main) package build, don't exit too early:
 #        have to check dump packages that may have been built before failure.
@@ -134,8 +133,8 @@ if [ "$PKGlist" = "" ]
 then
   echo "# no package requested: retrieve ordered list against git master branch ..."
   PKGlist=$(git log --oneline --name-status master.. |
-            grep -F /template.py | grep "^[AM]" | awk '{print $2}' |
-            grep -v "^src/" | tac | xargs -r -n 1 dirname | tr '\n' ' '
+            grep -F /template.py | grep "^[AM]" | awk '{print $2}' | grep -v "^src/" |
+            tac | awk '!seen[$0]++' | xargs -r -n 1 dirname | tr '\n' ' '
            )
 fi
 echo "# package(s) to build: $PKGlist"
