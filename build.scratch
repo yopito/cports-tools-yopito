@@ -4,9 +4,6 @@
 #          store in log files: build output, generated packages data.
 #
 # (todo) apk listing is wrong if listing for target arch: listing host arch
-# (todo) apk3: can't list package file content (not tar format anymore)
-#        wait for https://gitlab.alpinelinux.org/alpine/apk-tools/-/issues/7103
-#        update: add small listing only for native archive (via ./cbuild chroot)
 # (todo) on fails build, some (required) package(s) may have been produced.
 # (todo) package list from git: handle renamed files too
 # (todo) if failure on (main) package build, don't exit too early:
@@ -20,6 +17,7 @@
 # (todo) order packages to build by their dependency
 # (todo) option to build for several arch at once
 #
+# 20230228 fix dump package content with new staging repo
 # 20220806 dump package content (apk3: install it within chroot first)
 # 20220507 add cbuild dump on top of build.log
 # 20220315 cleanup apk root generation for apk3 (git)
@@ -164,46 +162,58 @@ for pkg in $PKGlist; do
   apkroot="$(mktemp -d /tmp/apkroot.XXXXXXXX)"
   apkroot_create ${apkroot}
 
-  # retrieve generated package(s) and their repo.
-  # From build log since cbuild does not provide this info.
-  # However, this will catch any other package that had to be rebuilt
-  pkgraw="$( grep -E '^=> Creating .+ in repository .+' ${LOGf})"
-  if [ "${pkgraw}" = "" ]; then
+  # Retrieve generated package(s) and their repo from build output
+  # since cbuild does not provide this info.
+  # This will catch any packages that have been rebuilt
+  rawlogpkg="$(grep -E '^=> Creating .+ in repository .+' ${LOGf})"
+  if [ "${rawlogpkg}" = "" ]; then
     echo "[ERROR] found 0 generated package in ${LOGf}"
     rm -rf ${apkroot}
     exit 1
   fi
 
-  # loop on subpackages, possibly with different repos and arch
-  # XXX detect skipped (invalid) list item
-  echo "${pkgraw}" | awk '{print $3,$6}' | sed -e 's,\.\.\.$,,'  \
-  | while read rawspkg rawrepo; do
-    spkg_arch="$(basename $rawrepo)"
-    spkg_repo="$(dirname $rawrepo)"
-    spkg_repo_nostage="${spkg_repo%/.stage}"
-    # strip package extension, revision and version
-    spkg_name=${rawspkg%.apk}
-    spkg_name=${spkg_name%-r*}
-    spkg_name=${spkg_name%-*}
+  # retrieve mapping between staged and target repositories path
+  declare -A repomap
+  rawrepomap="$(grep -E '^=> Merging stage from .+ to .+' ${LOGf})"
+  while read repstg reptgt; do
+    # remove arch
+    repstg="$(dirname $repstg)"
+    reptgt="$(dirname $reptgt)"
+    repomap[${repstg}]=${reptgt}
+  done < <(echo "${rawrepomap}" | awk '{print $5,$7}' | sed -e 's,\.\.\.$,,')
 
-    # unstage: package file has been produced but does not exist (anymore) in
-    # staging repo: so has been moved into main repo
-    if [ ! -f "${rawrepo}/${rawspkg}" ]; then
-      if [ -f "${spkg_repo_nostage}/${spkg_arch}/${rawspkg}" ]; then
-        spkg_repo="${spkg_repo_nostage}"
+  # loop on each generated packages, possibly with distinct repos and arch
+  # XXX detect skipped (invalid) list item
+  echo "${rawlogpkg}" | awk '{print $3,$6}' | sed -e 's,\.\.\.$,,'  \
+  | while read gpkgraw rawrepo; do
+
+    gpkg_arch="$(basename $rawrepo)"
+    gpkg_repo_stg="$(dirname $rawrepo)"
+    # strip package extension, revision and version
+    gpkg_name=${gpkgraw%.apk}
+    gpkg_name=${gpkg_name%-r*}
+    gpkg_name=${gpkg_name%-*}
+
+    # retrieve mapping between staged and target repository
+    gpkg_repo_nostg="${repomap[$gpkg_repo_stg]}"
+
+    # package may have been moved to target repo
+    if [ ! -f "${rawrepo}/${gpkgraw}" ]; then
+      if [ -f "${gpkg_repo_nostg}/${gpkg_arch}/${gpkgraw}" ]; then
+        gpkg_repo_stg="${gpkg_repo_nostg}"
       else
-        echo "[ERROR] package file not found (staged or unstaged): ${rawrepo}/${rawspkg}"
+        echo "[ERROR] package file not found (staged or unstaged): ${rawrepo}/${gpkgraw}"
         continue
       fi
     fi
 
-    spkg_log="${LOGdir}/${spkg_name}.${spkg_arch}.apk.info"
+    spkg_log="${LOGdir}/${gpkg_name}.${gpkg_arch}.apk.info"
 
-    echo "# [$pkg] dump subpkg $spkg_name info into ${spkg_log}"
+    echo "# [$pkg] dump generated pkg $gpkg_name info into ${spkg_log}"
 
     echo "# apk metadata info" >> ${spkg_log}
-    apkopt="--root ${apkroot} --arch ${spkg_arch} --allow-untrusted --repository ${spkg_repo}"
-    exec_or_dry "apk ${apkopt} info -a ${spkg_name} >> ${spkg_log}"
+    apkopt="--root ${apkroot} --arch ${gpkg_arch} --allow-untrusted --repository ${gpkg_repo_stg}"
+    exec_or_dry "apk ${apkopt} info -a ${gpkg_name} >> ${spkg_log}"
 
     echo "# package content:" >> ${spkg_log}
     # apk lists files only of installed packages, so let's use tar
@@ -211,8 +221,8 @@ for pkg in $PKGlist; do
     # apk3: can't list package content with tar, so install and work on within chroot
     #       - XXX only for native arch ?
     #       - may fail on user creation but package is installed
-    #apk2# exec_or_dry "2> /dev/null tar tzvf ${spkg_repo}/${spkg_arch}/${rawspkg} | column -t -H 4,5 -R 3 >> ${spkg_log}"
-    exec_or_dry "echo 'cd / ; apk add ${spkg_name} ;  apk info -L ${spkg_name} | grep -v contains: | sort | xargs ls -1trsk' | ./cbuild chroot" >> ${spkg_log}
+    #apk2# exec_or_dry "2> /dev/null tar tzvf ${gpkg_repo_stg}/${gpkg_arch}/${gpkgraw} | column -t -H 4,5 -R 3 >> ${spkg_log}"
+    exec_or_dry "echo 'cd / ; apk add ${gpkg_name} ;  apk info -L ${gpkg_name} | grep -v contains: | sort | xargs ls -1trsk' | ./cbuild chroot" >> ${spkg_log}
   done
   rm -rf ${apkroot}
 done
